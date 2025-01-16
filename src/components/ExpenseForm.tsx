@@ -98,8 +98,9 @@ export const ExpenseForm = ({ employeeDetails }: ExpenseFormProps) => {
       putOnlyUsedFonts: true,
     });
 
-    // Configure font for Hebrew text
-    doc.setFont("helvetica");
+    // Add Hebrew font support
+    doc.addFont("https://fonts.gstatic.com/s/heebo/v21/NGSpv5_NC0k9P_v6ZUCbLRAHxK1EiSysdUmj.ttf", "Heebo", "normal");
+    doc.setFont("Heebo");
     doc.setR2L(true);
     
     // Add employee details
@@ -152,7 +153,7 @@ export const ExpenseForm = ({ employeeDetails }: ExpenseFormProps) => {
     
     // Draw final line and total
     doc.line(20, y - 5, 190, y - 5);
-    doc.text(`סה"כ: ${total.toFixed(2)}`, 190, y + 10, { align: "right" });
+    doc.text(`סה"כ: ${total.toFixed(2)} ₪`, 190, y + 10, { align: "right" });
     
     // Draw vertical lines
     doc.line(20, 55, 20, y - 5); // Left border
