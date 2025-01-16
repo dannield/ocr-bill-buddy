@@ -187,7 +187,18 @@ export const ExpenseForm = ({ employeeDetails }: ExpenseFormProps) => {
 
     addMainPage();
 
-    expenses.forEach((expense, index) => {
+    // Create a promise for each image to load
+    const loadImage = (url: string): Promise<HTMLImageElement> => {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = url;
+      });
+    };
+
+    // Process each expense sequentially
+    expenses.forEach(async (expense, index) => {
       if (expense.imageUrl) {
         doc.addPage();
         
@@ -195,33 +206,32 @@ export const ExpenseForm = ({ employeeDetails }: ExpenseFormProps) => {
           .toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric' });
         addHebrewText(`קבלה מספר ${index + 1} - ${formattedDate}`, 150, 20, 14);
         
-        const img = new Image();
-        img.src = expense.imageUrl;
-        
-        // Calculate dimensions to fit the page while maintaining aspect ratio
-        const pageWidth = doc.internal.pageSize.getWidth();
-        const pageHeight = doc.internal.pageSize.getHeight();
-        
-        // Leave margins
-        const maxWidth = pageWidth - 40; // 20mm margins on each side
-        const maxHeight = pageHeight - 60; // 40mm top margin, 20mm bottom margin
-        
-        let imgWidth = img.width * 0.264583; // Convert px to mm
-        let imgHeight = img.height * 0.264583;
-        
-        // Scale down if image is too large
-        const widthRatio = maxWidth / imgWidth;
-        const heightRatio = maxHeight / imgHeight;
-        const scale = Math.min(widthRatio, heightRatio, 1);
-        
-        imgWidth *= scale;
-        imgHeight *= scale;
-        
-        // Center the image on the page
-        const x = (pageWidth - imgWidth) / 2;
-        const y = 40; // Fixed top margin
-        
         try {
+          const img = await loadImage(expense.imageUrl);
+          
+          // Calculate dimensions to fit the page while maintaining aspect ratio
+          const pageWidth = doc.internal.pageSize.getWidth();
+          const pageHeight = doc.internal.pageSize.getHeight();
+          
+          // Leave margins
+          const maxWidth = pageWidth - 40; // 20mm margins on each side
+          const maxHeight = pageHeight - 60; // 40mm top margin, 20mm bottom margin
+          
+          let imgWidth = img.width * 0.264583; // Convert px to mm
+          let imgHeight = img.height * 0.264583;
+          
+          // Scale down if image is too large
+          const widthRatio = maxWidth / imgWidth;
+          const heightRatio = maxHeight / imgHeight;
+          const scale = Math.min(widthRatio, heightRatio, 1);
+          
+          imgWidth *= scale;
+          imgHeight *= scale;
+          
+          // Center the image on the page
+          const x = (pageWidth - imgWidth) / 2;
+          const y = 40; // Fixed top margin
+          
           doc.addImage(expense.imageUrl, "JPEG", x, y, imgWidth, imgHeight);
         } catch (error) {
           console.error("Error adding image to PDF:", error);
