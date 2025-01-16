@@ -104,8 +104,8 @@ export const ExpenseForm = ({ employeeDetails }: ExpenseFormProps) => {
     setExpenses(newExpenses);
   };
 
-  const handleEmailPDF = () => {
-    const doc = generatePDF({ expenses, employeeDetails });
+  const handleEmailPDF = async () => {
+    const doc = await generatePDF({ expenses, employeeDetails });
     const pdfBlob = doc.output('blob');
     const pdfUrl = URL.createObjectURL(pdfBlob);
     

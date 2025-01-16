@@ -16,7 +16,7 @@ interface PDFGeneratorProps {
   };
 }
 
-export const generatePDF = ({ expenses, employeeDetails }: PDFGeneratorProps) => {
+export const generatePDF = async ({ expenses, employeeDetails }: PDFGeneratorProps) => {
   const doc = new jsPDF({
     orientation: "p",
     unit: "mm",
@@ -114,6 +114,7 @@ export const generatePDF = ({ expenses, employeeDetails }: PDFGeneratorProps) =>
   const loadImage = (url: string): Promise<HTMLImageElement> => {
     return new Promise((resolve, reject) => {
       const img = new Image();
+      img.crossOrigin = "Anonymous";
       img.onload = () => resolve(img);
       img.onerror = reject;
       img.src = url;
@@ -122,7 +123,8 @@ export const generatePDF = ({ expenses, employeeDetails }: PDFGeneratorProps) =>
 
   addMainPage();
 
-  expenses.forEach(async (expense, index) => {
+  // Handle attachments (images and PDFs)
+  for (const [index, expense] of expenses.entries()) {
     if (expense.imageUrl) {
       doc.addPage();
       
@@ -152,12 +154,25 @@ export const generatePDF = ({ expenses, employeeDetails }: PDFGeneratorProps) =>
         const x = (pageWidth - imgWidth) / 2;
         const y = 40;
         
-        doc.addImage(expense.imageUrl, "JPEG", x, y, imgWidth, imgHeight);
+        if (expense.imageUrl.toLowerCase().endsWith('.pdf')) {
+          // For PDF files, embed them directly
+          doc.addPage();
+          const pdfData = await fetch(expense.imageUrl).then(res => res.arrayBuffer());
+          doc.addPage();
+          const pdfPages = await doc.getNumberOfPages();
+          doc.setPage(pdfPages);
+          doc.addFileToVFS('attachment.pdf', pdfData);
+          doc.addAttachment('attachment.pdf', pdfData);
+        } else {
+          // For images, add them to the PDF
+          doc.addImage(img, "JPEG", x, y, imgWidth, imgHeight);
+        }
       } catch (error) {
-        console.error("Error adding image to PDF:", error);
+        console.error("Error adding file to PDF:", error);
+        addHebrewText("שגיאה בטעינת הקובץ", 150, 40, 12);
       }
     }
-  });
+  }
 
   return doc;
 };
