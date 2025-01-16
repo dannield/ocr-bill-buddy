@@ -78,7 +78,7 @@ export const ExpenseForm = ({ employeeDetails }: ExpenseFormProps) => {
   };
 
   const generatePDF = () => {
-    // Create new jsPDF instance with UTF-8 support
+    // Create new jsPDF instance
     const doc = new jsPDF({
       orientation: "p",
       unit: "mm",
@@ -86,9 +86,9 @@ export const ExpenseForm = ({ employeeDetails }: ExpenseFormProps) => {
       putOnlyUsedFonts: true,
     });
 
-    // Add Hebrew font support
-    doc.addFont("https://fonts.gstatic.com/ea/alefhebrew/v17/Alef-Regular.ttf", "Alef", "normal");
-    doc.setFont("Alef");
+    // Configure font for Hebrew text
+    doc.setFont("helvetica");
+    doc.setR2L(true);
     
     // Add employee details
     doc.setFontSize(16);
@@ -138,7 +138,6 @@ export const ExpenseForm = ({ employeeDetails }: ExpenseFormProps) => {
     doc.line(20, y - 5, 190, y - 5);
     
     // Draw vertical lines
-    const tableHeight = y - 55;
     doc.line(20, 55, 20, y - 5); // Left border
     doc.line(190, 55, 190, y - 5); // Right border
     doc.line(110, 55, 110, y - 5); // First divider
