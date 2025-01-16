@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
+import { Card, CardHeader, CardContent } from "@/components/ui/card";
 
 interface EmployeeDetailsProps {
   onSubmit: (details: { name: string; id: string }) => void;
@@ -41,7 +41,7 @@ export const EmployeeDetails = ({ onSubmit, initialData }: EmployeeDetailsProps)
           </div>
           <div className="space-y-2">
             <label htmlFor="id" className="block text-right">
-              מספר זהות
+              מספר עובד
             </label>
             <Input
               id="id"
