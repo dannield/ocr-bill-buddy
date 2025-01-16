@@ -6,6 +6,7 @@ import { createWorker } from "tesseract.js";
 import { useToast } from "@/components/ui/use-toast";
 import { jsPDF } from "jspdf";
 import NotoSansHebrewFont from "@/lib/NotoSansHebrew-Regular.ttf";
+import emailjs from '@emailjs/browser';
 
 interface ExpenseFormProps {
   employeeDetails: {
@@ -104,24 +105,18 @@ export const ExpenseForm = ({ employeeDetails }: ExpenseFormProps) => {
     const createHebrewTextImage = (text: string, fontSize: number = 12) => {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d')!;
-      
-      // Set font and measure text
       ctx.font = `${fontSize}px NotoSansHebrew`;
-      const metrics = ctx.measureText(text);
       
-      // Set canvas dimensions based on text metrics
+      const metrics = ctx.measureText(text);
       const textWidth = metrics.width;
       const textHeight = fontSize;
       
-      // Add some padding
-      canvas.width = textWidth + 10;
+      canvas.width = textWidth + 20;
       canvas.height = textHeight + 10;
       
-      // Clear canvas
       ctx.fillStyle = 'white';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       
-      // Draw text
       ctx.font = `${fontSize}px NotoSansHebrew`;
       ctx.fillStyle = 'black';
       ctx.textAlign = 'right';
@@ -136,26 +131,22 @@ export const ExpenseForm = ({ employeeDetails }: ExpenseFormProps) => {
       const ctx = canvas.getContext('2d')!;
       ctx.font = `${fontSize}px NotoSansHebrew`;
       const metrics = ctx.measureText(text);
-      const imageWidth = (metrics.width + 10) * 0.264583; // Convert pixels to mm
+      const imageWidth = (metrics.width + 20) * 0.264583; // Convert pixels to mm
       const imageHeight = (fontSize + 10) * 0.264583; // Convert pixels to mm
       
       const image = createHebrewTextImage(text, fontSize);
-      doc.addImage(image, 'PNG', x, y, imageWidth, imageHeight);
+      doc.addImage(image, 'PNG', x - imageWidth, y, imageWidth, imageHeight);
       return { width: imageWidth, height: imageHeight };
     };
 
-    // First page - Main form
     const addMainPage = () => {
-      // Title
-      addHebrewText("טופס החזר הוצאות", 100, 20, 16);
+      addHebrewText("טופס החזר הוצאות", 150, 20, 16);
       
-      // Employee details
-      addHebrewText(`שם: ${employeeDetails.name}`, 120, 30, 12);
-      addHebrewText(`מספר עובד: ${employeeDetails.id}`, 120, 40, 12);
+      addHebrewText(`שם: ${employeeDetails.name}`, 170, 40, 12);
+      addHebrewText(`מספר עובד: ${employeeDetails.id}`, 170, 50, 12);
 
-      // Table headers
-      const headers = ["סכום", "תאריך", "פירוט"];
-      let y = 60;
+      const headers = ["תאריך", "פירוט", "סכום"];
+      let y = 70;
       
       doc.line(20, y - 5, 190, y - 5);
       headers.forEach((header, i) => {
@@ -164,53 +155,46 @@ export const ExpenseForm = ({ employeeDetails }: ExpenseFormProps) => {
       });
       doc.line(20, y + 2, 190, y + 2);
 
-      // Expense entries
       y += 10;
       let total = 0;
       expenses.forEach((expense) => {
         doc.line(20, y - 5, 190, y - 5);
         
-        // Format date to dd/mm/yyyy
-        const formattedDate = new Date(expense.date).toLocaleDateString('he-IL');
+        const formattedDate = new Date(expense.date)
+          .toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric' });
         
-        doc.text(expense.amount, 190, y, { align: "right" });
-        doc.text(formattedDate, 130, y, { align: "right" });
-        addHebrewText(expense.description, 20, y - 3, 12);
+        addHebrewText(expense.amount, 50, y - 3, 12);
+        addHebrewText(expense.description, 110, y - 3, 12);
+        addHebrewText(formattedDate, 170, y - 3, 12);
         
         total += parseFloat(expense.amount) || 0;
         y += 10;
       });
 
-      // Total and signatures
       doc.line(20, y - 5, 190, y - 5);
-      addHebrewText(`סה"כ: ${total.toFixed(2)} ₪`, 120, y + 7, 12);
+      addHebrewText(`סה"כ: ${total.toFixed(2)} ₪`, 170, y + 7, 12);
 
-      // Draw table borders
-      doc.line(20, 55, 20, y - 5);
-      doc.line(190, 55, 190, y - 5);
-      doc.line(110, 55, 110, y - 5);
-      doc.line(50, 55, 50, y - 5);
+      doc.line(20, 65, 20, y - 5);
+      doc.line(190, 65, 190, y - 5);
+      doc.line(150, 65, 150, y - 5);
+      doc.line(90, 65, 90, y - 5);
 
-      // Add signature lines
       y += 30;
-      addHebrewText("חתימת העובד: _________________", 70, y, 12);
+      addHebrewText("חתימת העובד: _________________", 120, y, 12);
       y += 10;
-      addHebrewText("חתימת מנהל: _________________", 70, y, 12);
+      addHebrewText("חתימת מנהל: _________________", 120, y, 12);
     };
 
-    // Add main form page
     addMainPage();
 
-    // Add receipts - one per page
     expenses.forEach((expense, index) => {
       if (expense.imageUrl) {
         doc.addPage();
         
-        // Add receipt number and date at the top
-        const formattedDate = new Date(expense.date).toLocaleDateString('he-IL');
-        addHebrewText(`קבלה מספר ${index + 1} - ${formattedDate}`, 100, 20, 14);
+        const formattedDate = new Date(expense.date)
+          .toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        addHebrewText(`קבלה מספר ${index + 1} - ${formattedDate}`, 150, 20, 14);
         
-        // Calculate image dimensions to fit the page while maintaining aspect ratio
         const img = new Image();
         img.src = expense.imageUrl;
         
@@ -220,7 +204,6 @@ export const ExpenseForm = ({ employeeDetails }: ExpenseFormProps) => {
         let imgWidth = img.width * 0.264583; // Convert px to mm
         let imgHeight = img.height * 0.264583;
         
-        // Scale image to fit page
         if (imgWidth > maxWidth) {
           const ratio = maxWidth / imgWidth;
           imgWidth = maxWidth;
@@ -233,9 +216,8 @@ export const ExpenseForm = ({ employeeDetails }: ExpenseFormProps) => {
           imgWidth = imgWidth * ratio;
         }
         
-        // Center the image on the page
-        const x = (210 - imgWidth) / 2; // 210 is A4 width
-        const y = (297 - imgHeight) / 2; // 297 is A4 height
+        const x = (210 - imgWidth) / 2;
+        const y = 40;
         
         try {
           doc.addImage(expense.imageUrl, "JPEG", x, y, imgWidth, imgHeight);
@@ -245,7 +227,54 @@ export const ExpenseForm = ({ employeeDetails }: ExpenseFormProps) => {
       }
     });
 
-    doc.save("expenses.pdf");
+    return doc;
+  };
+
+  const handleEmailPDF = async () => {
+    const doc = generatePDF();
+    const pdfBlob = doc.output('blob');
+    const reader = new FileReader();
+    
+    reader.onload = async function() {
+      const base64data = reader.result?.toString().split(',')[1];
+      
+      try {
+        toast({
+          title: "שולח מייל",
+          description: "אנא המתן...",
+        });
+        
+        const templateParams = {
+          to_email: 'finance@final.co.il',
+          from_name: employeeDetails.name,
+          message: `דוח הוצאות מאת ${employeeDetails.name} (${employeeDetails.id})`,
+          pdf_data: base64data,
+        };
+
+        await emailjs.send(
+          'YOUR_SERVICE_ID', // Replace with your EmailJS service ID
+          'YOUR_TEMPLATE_ID', // Replace with your EmailJS template ID
+          templateParams,
+          'YOUR_PUBLIC_KEY' // Replace with your EmailJS public key
+        );
+
+        toast({
+          title: "המייל נשלח בהצלחה",
+          description: "הדוח נשלח לfinance@final.co.il",
+        });
+        
+        doc.save("expenses.pdf");
+      } catch (error) {
+        console.error("Error sending email:", error);
+        toast({
+          title: "שגיאה בשליחת המייל",
+          description: "אנא נסה שוב מאוחר יותר",
+          variant: "destructive",
+        });
+      }
+    };
+    
+    reader.readAsDataURL(pdfBlob);
   };
 
   return (
@@ -318,9 +347,14 @@ export const ExpenseForm = ({ employeeDetails }: ExpenseFormProps) => {
                 </tbody>
               </table>
 
-              <Button onClick={generatePDF} className="w-full">
-                צור PDF
-              </Button>
+              <div className="space-y-4">
+                <Button onClick={handleEmailPDF} className="w-full">
+                  שלח PDF במייל
+                </Button>
+                <Button onClick={() => generatePDF().save("expenses.pdf")} className="w-full">
+                  הורד PDF
+                </Button>
+              </div>
             </div>
           )}
         </div>
