@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { createWorker } from "tesseract.js";
 import { useToast } from "@/components/ui/use-toast";
 import { jsPDF } from "jspdf";
-import OpenSansFont from "@/lib/OpenSans-VariableFont_wdth,wght.ttf";
+import NotoSansHebrewFont from "@/lib/NotoSansHebrew-Regular.ttf";
 
 interface ExpenseFormProps {
   employeeDetails: {
@@ -41,12 +41,11 @@ export const ExpenseForm = ({ employeeDetails }: ExpenseFormProps) => {
       const imageUrl = URL.createObjectURL(file);
       const { data: { text } } = await worker.recognize(imageUrl);
       
-      // Look for total amount patterns in Hebrew receipts
       const totalPatterns = [
         /סה"כ\s*[₪]?\s*(\d+(\.\d{2})?)/,
         /סך הכל\s*[₪]?\s*(\d+(\.\d{2})?)/,
         /סכום לתשלום\s*[₪]?\s*(\d+(\.\d{2})?)/,
-        /\d+(\.\d{2})?/  // Fallback to first number if no total found
+        /\d+(\.\d{2})?/
       ];
       
       let amount = "";
@@ -58,7 +57,6 @@ export const ExpenseForm = ({ employeeDetails }: ExpenseFormProps) => {
         }
       }
       
-      // Get current date as default
       const today = new Date().toISOString().split("T")[0];
       
       setExpenses([...expenses, {
@@ -99,50 +97,63 @@ export const ExpenseForm = ({ employeeDetails }: ExpenseFormProps) => {
       putOnlyUsedFonts: true,
     });
 
-    // Add the OpenSans font
-    doc.addFont(OpenSansFont, "OpenSans", "normal");
-    doc.setFont("OpenSans");
+    doc.addFont(NotoSansHebrewFont, "NotoSansHebrew", "normal");
+    doc.setFont("NotoSansHebrew");
 
-    // Enable right-to-left text direction
     doc.setR2L(true);
 
-    // Function to encode Hebrew text
-    const encodeHebrew = (text: string) => text;  // No need for character mapping now
+    const createHebrewTextImage = (text: string, fontSize: number = 12) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d')!;
+      
+      ctx.font = `${fontSize}px NotoSansHebrew`;
+      const metrics = ctx.measureText(text);
+      canvas.width = metrics.width + 10;
+      canvas.height = fontSize + 10;
+      
+      ctx.fillStyle = 'white';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.font = `${fontSize}px NotoSansHebrew`;
+      ctx.fillStyle = 'black';
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, canvas.width - 5, canvas.height / 2);
+      
+      return canvas.toDataURL('image/png');
+    };
 
-    // Add employee details
-    doc.setFontSize(16);
-    doc.text(encodeHebrew("טופס החזר הוצאות"), 190, 20, { align: "right" });
-    doc.setFontSize(12);
-    doc.text(encodeHebrew(`שם: ${employeeDetails.name}`), 190, 30, { align: "right" });
-    doc.text(encodeHebrew(`מספר עובד: ${employeeDetails.id}`), 190, 40, { align: "right" });
+    const titleImage = createHebrewTextImage("טופס החזר הוצאות", 16);
+    doc.addImage(titleImage, 'PNG', 100, 20, 90, 10);
     
-    // Add table headers
+    const nameImage = createHebrewTextImage(`שם: ${employeeDetails.name}`, 12);
+    doc.addImage(nameImage, 'PNG', 120, 30, 70, 8);
+    
+    const idImage = createHebrewTextImage(`מספר עובד: ${employeeDetails.id}`, 12);
+    doc.addImage(idImage, 'PNG', 120, 40, 70, 8);
+
     const headers = ["סכום", "תאריך", "פירוט"];
     let y = 60;
     
-    // Draw table header
-    doc.line(20, y - 5, 190, y - 5); // Top line
+    doc.line(20, y - 5, 190, y - 5);
     headers.forEach((header, i) => {
-      doc.text(encodeHebrew(header), 190 - (i * 60), y, { align: "right" });
+      const headerImage = createHebrewTextImage(header);
+      doc.addImage(headerImage, 'PNG', 190 - ((i + 1) * 60), y - 3, 30, 8);
     });
-    doc.line(20, y + 2, 190, y + 2); // Bottom line of header
-    
-    // Add expenses with table lines
+    doc.line(20, y + 2, 190, y + 2);
+
     y += 10;
     let total = 0;
     expenses.forEach((expense, index) => {
-      // Draw horizontal lines
       doc.line(20, y - 5, 190, y - 5);
       
-      // Add expense data
       doc.text(expense.amount, 190, y, { align: "right" });
       doc.text(expense.date, 130, y, { align: "right" });
-      doc.text(encodeHebrew(expense.description), 70, y, { align: "right" });
       
-      // Calculate total
+      const descImage = createHebrewTextImage(expense.description);
+      doc.addImage(descImage, 'PNG', 20, y - 3, 50, 8);
+      
       total += parseFloat(expense.amount) || 0;
       
-      // Add receipt image if available
       if (expense.imageUrl) {
         try {
           const imgHeight = 40;
@@ -156,24 +167,23 @@ export const ExpenseForm = ({ employeeDetails }: ExpenseFormProps) => {
       
       y += 10;
     });
-    
-    // Draw final line and total
+
     doc.line(20, y - 5, 190, y - 5);
-    doc.text(encodeHebrew(`סה"כ: ${total.toFixed(2)} ₪`), 190, y + 10, { align: "right" });
-    
-    // Draw vertical lines
-    doc.line(20, 55, 20, y - 5); // Left border
-    doc.line(190, 55, 190, y - 5); // Right border
-    doc.line(110, 55, 110, y - 5); // First divider
-    doc.line(50, 55, 50, y - 5); // Second divider
-    
-    // Add signature lines
+    const totalImage = createHebrewTextImage(`סה"כ: ${total.toFixed(2)} ₪`);
+    doc.addImage(totalImage, 'PNG', 120, y + 7, 70, 8);
+
+    doc.line(20, 55, 20, y - 5);
+    doc.line(190, 55, 190, y - 5);
+    doc.line(110, 55, 110, y - 5);
+    doc.line(50, 55, 50, y - 5);
+
     y += 30;
-    doc.text(encodeHebrew("חתימת העובד: _________________"), 190, y, { align: "right" });
+    const signEmployeeImage = createHebrewTextImage("חתימת העובד: _________________");
+    doc.addImage(signEmployeeImage, 'PNG', 70, y, 120, 8);
     y += 10;
-    doc.text(encodeHebrew("חתימת מנהל: _________________"), 190, y, { align: "right" });
-    
-    // Save PDF
+    const signManagerImage = createHebrewTextImage("חתימת מנהל: _________________");
+    doc.addImage(signManagerImage, 'PNG', 70, y, 120, 8);
+
     doc.save("expenses.pdf");
   };
 
