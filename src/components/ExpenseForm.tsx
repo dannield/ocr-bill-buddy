@@ -37,41 +37,56 @@ export const ExpenseForm = ({ employeeDetails }: ExpenseFormProps) => {
     });
 
     try {
-      const worker = await createWorker("heb");
       const imageUrl = URL.createObjectURL(file);
-      const { data: { text } } = await worker.recognize(imageUrl);
       
-      const totalPatterns = [
-        /סה"כ\s*[₪]?\s*(\d+(\.\d{2})?)/,
-        /סך הכל\s*[₪]?\s*(\d+(\.\d{2})?)/,
-        /סכום לתשלום\s*[₪]?\s*(\d+(\.\d{2})?)/,
-        /\d+(\.\d{2})?/
-      ];
-      
-      let amount = "";
-      for (const pattern of totalPatterns) {
-        const match = text.match(pattern);
-        if (match) {
-          amount = match[1] || match[0];
-          break;
+      if (file.type === 'application/pdf') {
+        // For PDF files, just store them without OCR
+        setExpenses([...expenses, {
+          amount: "",
+          date: new Date().toISOString().split("T")[0],
+          description: "",
+          imageUrl,
+        }]);
+        
+        toast({
+          title: "קבלה נוספה בהצלחה",
+          description: "אנא השלם את הפרטים החסרים",
+        });
+      } else {
+        // For images, process with OCR
+        const worker = await createWorker("heb");
+        const { data: { text } } = await worker.recognize(imageUrl);
+        
+        const totalPatterns = [
+          /סה"כ\s*[₪]?\s*(\d+(\.\d{2})?)/,
+          /סך הכל\s*[₪]?\s*(\d+(\.\d{2})?)/,
+          /סכום לתשלום\s*[₪]?\s*(\d+(\.\d{2})?)/,
+          /\d+(\.\d{2})?/
+        ];
+        
+        let amount = "";
+        for (const pattern of totalPatterns) {
+          const match = text.match(pattern);
+          if (match) {
+            amount = match[1] || match[0];
+            break;
+          }
         }
+        
+        setExpenses([...expenses, {
+          amount,
+          date: new Date().toISOString().split("T")[0],
+          description: "",
+          imageUrl,
+        }]);
+        
+        await worker.terminate();
+        
+        toast({
+          title: "קבלה נוספה בהצלחה",
+          description: "אנא השלם את הפרטים החסרים",
+        });
       }
-      
-      const today = new Date().toISOString().split("T")[0];
-      
-      setExpenses([...expenses, {
-        amount,
-        date: today,
-        description: "",
-        imageUrl,
-      }]);
-      
-      await worker.terminate();
-      
-      toast({
-        title: "קבלה נוספה בהצלחה",
-        description: "אנא השלם את הפרטים החסרים",
-      });
     } catch (error) {
       toast({
         title: "שגיאה",
