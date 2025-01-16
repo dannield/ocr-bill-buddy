@@ -40,9 +40,22 @@ export const ExpenseForm = ({ employeeDetails }: ExpenseFormProps) => {
       const imageUrl = URL.createObjectURL(file);
       const { data: { text } } = await worker.recognize(imageUrl);
       
-      // Extract amount using regex (looking for numbers with optional decimal points)
-      const amountMatch = text.match(/\d+(\.\d{2})?/);
-      const amount = amountMatch ? amountMatch[0] : "";
+      // Look for total amount patterns in Hebrew receipts
+      const totalPatterns = [
+        /סה"כ\s*[₪]?\s*(\d+(\.\d{2})?)/,
+        /סך הכל\s*[₪]?\s*(\d+(\.\d{2})?)/,
+        /סכום לתשלום\s*[₪]?\s*(\d+(\.\d{2})?)/,
+        /\d+(\.\d{2})?/  // Fallback to first number if no total found
+      ];
+      
+      let amount = "";
+      for (const pattern of totalPatterns) {
+        const match = text.match(pattern);
+        if (match) {
+          amount = match[1] || match[0];
+          break;
+        }
+      }
       
       // Get current date as default
       const today = new Date().toISOString().split("T")[0];
@@ -51,7 +64,7 @@ export const ExpenseForm = ({ employeeDetails }: ExpenseFormProps) => {
         amount,
         date: today,
         description: "",
-        imageUrl, // Store the image URL
+        imageUrl,
       }]);
       
       await worker.terminate();
@@ -78,7 +91,6 @@ export const ExpenseForm = ({ employeeDetails }: ExpenseFormProps) => {
   };
 
   const generatePDF = () => {
-    // Create new jsPDF instance
     const doc = new jsPDF({
       orientation: "p",
       unit: "mm",
@@ -92,9 +104,9 @@ export const ExpenseForm = ({ employeeDetails }: ExpenseFormProps) => {
     
     // Add employee details
     doc.setFontSize(16);
-    doc.text("דוח החזר הוצאות", 190, 20, { align: "right" });
+    doc.text("טופס החזר הוצאות", 190, 20, { align: "right" });
     doc.setFontSize(12);
-    doc.text(`שם העובד: ${employeeDetails.name}`, 190, 30, { align: "right" });
+    doc.text(`לכבוד: ${employeeDetails.name}`, 190, 30, { align: "right" });
     doc.text(`מספר עובד: ${employeeDetails.id}`, 190, 40, { align: "right" });
     
     // Add table headers
@@ -110,6 +122,7 @@ export const ExpenseForm = ({ employeeDetails }: ExpenseFormProps) => {
     
     // Add expenses with table lines
     y += 10;
+    let total = 0;
     expenses.forEach((expense, index) => {
       // Draw horizontal lines
       doc.line(20, y - 5, 190, y - 5);
@@ -118,6 +131,9 @@ export const ExpenseForm = ({ employeeDetails }: ExpenseFormProps) => {
       doc.text(expense.amount, 190, y, { align: "right" });
       doc.text(expense.date, 130, y, { align: "right" });
       doc.text(expense.description, 70, y, { align: "right" });
+      
+      // Calculate total
+      total += parseFloat(expense.amount) || 0;
       
       // Add receipt image if available
       if (expense.imageUrl) {
@@ -134,14 +150,21 @@ export const ExpenseForm = ({ employeeDetails }: ExpenseFormProps) => {
       y += 10;
     });
     
-    // Draw final line
+    // Draw final line and total
     doc.line(20, y - 5, 190, y - 5);
+    doc.text(`סה"כ: ${total.toFixed(2)}`, 190, y + 10, { align: "right" });
     
     // Draw vertical lines
     doc.line(20, 55, 20, y - 5); // Left border
     doc.line(190, 55, 190, y - 5); // Right border
     doc.line(110, 55, 110, y - 5); // First divider
     doc.line(50, 55, 50, y - 5); // Second divider
+    
+    // Add signature lines
+    y += 30;
+    doc.text("חתימת העובד: _________________", 190, y, { align: "right" });
+    y += 10;
+    doc.text("חתימת מנהל: _________________", 190, y, { align: "right" });
     
     // Save PDF
     doc.save("expenses.pdf");
