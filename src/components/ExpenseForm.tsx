@@ -198,26 +198,28 @@ export const ExpenseForm = ({ employeeDetails }: ExpenseFormProps) => {
         const img = new Image();
         img.src = expense.imageUrl;
         
-        const maxWidth = 170; // Max width in mm
-        const maxHeight = 240; // Max height in mm
+        // Calculate dimensions to fit the page while maintaining aspect ratio
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        
+        // Leave margins
+        const maxWidth = pageWidth - 40; // 20mm margins on each side
+        const maxHeight = pageHeight - 60; // 40mm top margin, 20mm bottom margin
         
         let imgWidth = img.width * 0.264583; // Convert px to mm
         let imgHeight = img.height * 0.264583;
         
-        if (imgWidth > maxWidth) {
-          const ratio = maxWidth / imgWidth;
-          imgWidth = maxWidth;
-          imgHeight = imgHeight * ratio;
-        }
+        // Scale down if image is too large
+        const widthRatio = maxWidth / imgWidth;
+        const heightRatio = maxHeight / imgHeight;
+        const scale = Math.min(widthRatio, heightRatio, 1);
         
-        if (imgHeight > maxHeight) {
-          const ratio = maxHeight / imgHeight;
-          imgHeight = maxHeight;
-          imgWidth = imgWidth * ratio;
-        }
+        imgWidth *= scale;
+        imgHeight *= scale;
         
-        const x = (210 - imgWidth) / 2;
-        const y = 40;
+        // Center the image on the page
+        const x = (pageWidth - imgWidth) / 2;
+        const y = 40; // Fixed top margin
         
         try {
           doc.addImage(expense.imageUrl, "JPEG", x, y, imgWidth, imgHeight);
@@ -233,48 +235,23 @@ export const ExpenseForm = ({ employeeDetails }: ExpenseFormProps) => {
   const handleEmailPDF = async () => {
     const doc = generatePDF();
     const pdfBlob = doc.output('blob');
-    const reader = new FileReader();
+    const pdfUrl = URL.createObjectURL(pdfBlob);
     
-    reader.onload = async function() {
-      const base64data = reader.result?.toString().split(',')[1];
-      
-      try {
-        toast({
-          title: "שולח מייל",
-          description: "אנא המתן...",
-        });
-        
-        const templateParams = {
-          to_email: 'finance@final.co.il',
-          from_name: employeeDetails.name,
-          message: `דוח הוצאות מאת ${employeeDetails.name} (${employeeDetails.id})`,
-          pdf_data: base64data,
-        };
-
-        await emailjs.send(
-          import.meta.env.VITE_EMAILJS_SERVICE_ID,
-          import.meta.env.VITE_EMAILJS_TEMPLATE_ID,
-          templateParams,
-          import.meta.env.VITE_EMAILJS_PUBLIC_KEY
-        );
-
-        toast({
-          title: "המייל נשלח בהצלחה",
-          description: "הדוח נשלח לfinance@final.co.il",
-        });
-        
-        doc.save("expenses.pdf");
-      } catch (error) {
-        console.error("Error sending email:", error);
-        toast({
-          title: "שגיאה בשליחת המייל",
-          description: "אנא נסה שוב מאוחר יותר",
-          variant: "destructive",
-        });
-      }
-    };
+    // Create mailto link
+    const subject = encodeURIComponent(`דוח הוצאות - ${employeeDetails.name}`);
+    const body = encodeURIComponent(`מצורף דוח הוצאות מאת ${employeeDetails.name} (${employeeDetails.id})`);
+    const mailtoLink = `mailto:finance@final.co.il?subject=${subject}&body=${body}`;
     
-    reader.readAsDataURL(pdfBlob);
+    // Open default mail client
+    window.open(mailtoLink);
+    
+    // Download PDF
+    doc.save("expenses.pdf");
+    
+    toast({
+      title: "הקובץ הורד בהצלחה",
+      description: "נפתח חלון מייל חדש לשליחת הדוח",
+    });
   };
 
   return (
