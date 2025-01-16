@@ -105,21 +105,29 @@ export const ExpenseForm = ({ employeeDetails }: ExpenseFormProps) => {
   };
 
   const handleEmailPDF = async () => {
-    const doc = await generatePDF({ expenses, employeeDetails });
-    const pdfBlob = doc.output('blob');
-    const pdfUrl = URL.createObjectURL(pdfBlob);
-    
-    const subject = encodeURIComponent(`דוח הוצאות - ${employeeDetails.name}`);
-    const body = encodeURIComponent(`מצורף דוח הוצאות מאת ${employeeDetails.name} (${employeeDetails.id})`);
-    const mailtoLink = `mailto:finance@final.co.il?subject=${subject}&body=${body}`;
-    
-    window.open(mailtoLink);
-    doc.save("expenses.pdf");
-    
-    toast({
-      title: "הקובץ הורד בהצלחה",
-      description: "נפתח חלון מייל חדש לשליחת הדוח",
-    });
+    try {
+      const doc = await generatePDF({ expenses, employeeDetails });
+      const pdfBlob = doc.output('blob');
+      const pdfUrl = URL.createObjectURL(pdfBlob);
+      
+      const subject = encodeURIComponent(`דוח הוצאות - ${employeeDetails.name}`);
+      const body = encodeURIComponent(`מצורף דוח הוצאות מאת ${employeeDetails.name} (${employeeDetails.id})`);
+      const mailtoLink = `mailto:finance@final.co.il?subject=${subject}&body=${body}`;
+      
+      window.open(mailtoLink);
+      doc.save("expenses.pdf");
+      
+      toast({
+        title: "הקובץ הורד בהצלחה",
+        description: "נפתח חלון מייל חדש לשליחת הדוח",
+      });
+    } catch (error) {
+      toast({
+        title: "שגיאה",
+        description: "אירעה שגיאה בייצור הקובץ",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -145,7 +153,21 @@ export const ExpenseForm = ({ employeeDetails }: ExpenseFormProps) => {
                   שלח PDF במייל
                 </Button>
                 <Button 
-                  onClick={() => generatePDF({ expenses, employeeDetails }).save("expenses.pdf")} 
+                  onClick={async () => {
+                    try {
+                      const doc = await generatePDF({ expenses, employeeDetails });
+                      doc.save("expenses.pdf");
+                      toast({
+                        title: "הקובץ הורד בהצלחה",
+                      });
+                    } catch (error) {
+                      toast({
+                        title: "שגיאה",
+                        description: "אירעה שגיאה בייצור הקובץ",
+                        variant: "destructive",
+                      });
+                    }
+                  }} 
                   className="w-full"
                 >
                   הורד PDF

@@ -133,38 +133,35 @@ export const generatePDF = async ({ expenses, employeeDetails }: PDFGeneratorPro
       addHebrewText(`קבלה מספר ${index + 1} - ${formattedDate}`, 150, 20, 14);
       
       try {
-        const img = await loadImage(expense.imageUrl);
-        
-        const pageWidth = doc.internal.pageSize.getWidth();
-        const pageHeight = doc.internal.pageSize.getHeight();
-        
-        const maxWidth = pageWidth - 40;
-        const maxHeight = pageHeight - 60;
-        
-        let imgWidth = img.width * 0.264583;
-        let imgHeight = img.height * 0.264583;
-        
-        const widthRatio = maxWidth / imgWidth;
-        const heightRatio = maxHeight / imgHeight;
-        const scale = Math.min(widthRatio, heightRatio, 1);
-        
-        imgWidth *= scale;
-        imgHeight *= scale;
-        
-        const x = (pageWidth - imgWidth) / 2;
-        const y = 40;
-        
         if (expense.imageUrl.toLowerCase().endsWith('.pdf')) {
-          // For PDF files, embed them directly
-          doc.addPage();
-          const pdfData = await fetch(expense.imageUrl).then(res => res.arrayBuffer());
-          doc.addPage();
-          const pdfPages = await doc.getNumberOfPages();
-          doc.setPage(pdfPages);
-          doc.addFileToVFS('attachment.pdf', pdfData);
-          doc.addAttachment('attachment.pdf', pdfData);
+          // For PDF files, create a link to download them separately
+          addHebrewText("קובץ PDF מצורף", 150, 40, 12);
+          const pdfData = await fetch(expense.imageUrl).then(res => res.blob());
+          const pdfUrl = URL.createObjectURL(pdfData);
+          doc.link(20, 50, 170, 10, { url: pdfUrl });
         } else {
           // For images, add them to the PDF
+          const img = await loadImage(expense.imageUrl);
+          
+          const pageWidth = doc.internal.pageSize.getWidth();
+          const pageHeight = doc.internal.pageSize.getHeight();
+          
+          const maxWidth = pageWidth - 40;
+          const maxHeight = pageHeight - 60;
+          
+          let imgWidth = img.width * 0.264583;
+          let imgHeight = img.height * 0.264583;
+          
+          const widthRatio = maxWidth / imgWidth;
+          const heightRatio = maxHeight / imgHeight;
+          const scale = Math.min(widthRatio, heightRatio, 1);
+          
+          imgWidth *= scale;
+          imgHeight *= scale;
+          
+          const x = (pageWidth - imgWidth) / 2;
+          const y = 40;
+          
           doc.addImage(img, "JPEG", x, y, imgWidth, imgHeight);
         }
       } catch (error) {
