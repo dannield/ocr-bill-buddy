@@ -98,17 +98,26 @@ export const ExpenseForm = ({ employeeDetails }: ExpenseFormProps) => {
       putOnlyUsedFonts: true,
     });
 
-    // Add Hebrew font support
-    doc.addFont("https://fonts.gstatic.com/s/heebo/v21/NGSpv5_NC0k9P_v6ZUCbLRAHxK1EiSysdUmj.ttf", "Heebo", "normal");
-    doc.setFont("Heebo");
+    // Enable right-to-left text direction
     doc.setR2L(true);
+
+    // Function to encode Hebrew text
+    const encodeHebrew = (text: string) => {
+      return text.split('').map(char => {
+        const code = char.charCodeAt(0);
+        if (code >= 0x0590 && code <= 0x05FF) {
+          return String.fromCharCode(code - 0x0590 + 0xE000);
+        }
+        return char;
+      }).join('');
+    };
     
     // Add employee details
     doc.setFontSize(16);
-    doc.text("טופס החזר הוצאות", 190, 20, { align: "right" });
+    doc.text(encodeHebrew("טופס החזר הוצאות"), 190, 20, { align: "right" });
     doc.setFontSize(12);
-    doc.text(`לכבוד: ${employeeDetails.name}`, 190, 30, { align: "right" });
-    doc.text(`מספר עובד: ${employeeDetails.id}`, 190, 40, { align: "right" });
+    doc.text(encodeHebrew(`שם: ${employeeDetails.name}`), 190, 30, { align: "right" });
+    doc.text(encodeHebrew(`מספר עובד: ${employeeDetails.id}`), 190, 40, { align: "right" });
     
     // Add table headers
     const headers = ["סכום", "תאריך", "פירוט"];
@@ -117,7 +126,7 @@ export const ExpenseForm = ({ employeeDetails }: ExpenseFormProps) => {
     // Draw table header
     doc.line(20, y - 5, 190, y - 5); // Top line
     headers.forEach((header, i) => {
-      doc.text(header, 190 - (i * 60), y, { align: "right" });
+      doc.text(encodeHebrew(header), 190 - (i * 60), y, { align: "right" });
     });
     doc.line(20, y + 2, 190, y + 2); // Bottom line of header
     
@@ -131,7 +140,7 @@ export const ExpenseForm = ({ employeeDetails }: ExpenseFormProps) => {
       // Add expense data
       doc.text(expense.amount, 190, y, { align: "right" });
       doc.text(expense.date, 130, y, { align: "right" });
-      doc.text(expense.description, 70, y, { align: "right" });
+      doc.text(encodeHebrew(expense.description), 70, y, { align: "right" });
       
       // Calculate total
       total += parseFloat(expense.amount) || 0;
@@ -153,7 +162,7 @@ export const ExpenseForm = ({ employeeDetails }: ExpenseFormProps) => {
     
     // Draw final line and total
     doc.line(20, y - 5, 190, y - 5);
-    doc.text(`סה"כ: ${total.toFixed(2)} ₪`, 190, y + 10, { align: "right" });
+    doc.text(encodeHebrew(`סה"כ: ${total.toFixed(2)} ₪`), 190, y + 10, { align: "right" });
     
     // Draw vertical lines
     doc.line(20, 55, 20, y - 5); // Left border
@@ -163,9 +172,9 @@ export const ExpenseForm = ({ employeeDetails }: ExpenseFormProps) => {
     
     // Add signature lines
     y += 30;
-    doc.text("חתימת העובד: _________________", 190, y, { align: "right" });
+    doc.text(encodeHebrew("חתימת העובד: _________________"), 190, y, { align: "right" });
     y += 10;
-    doc.text("חתימת מנהל: _________________", 190, y, { align: "right" });
+    doc.text(encodeHebrew("חתימת מנהל: _________________"), 190, y, { align: "right" });
     
     // Save PDF
     doc.save("expenses.pdf");
