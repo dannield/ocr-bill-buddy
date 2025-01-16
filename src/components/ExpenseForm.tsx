@@ -99,20 +99,29 @@ export const ExpenseForm = ({ employeeDetails }: ExpenseFormProps) => {
 
     doc.addFont(NotoSansHebrewFont, "NotoSansHebrew", "normal");
     doc.setFont("NotoSansHebrew");
-
     doc.setR2L(true);
 
     const createHebrewTextImage = (text: string, fontSize: number = 12) => {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d')!;
       
+      // Set font and measure text
       ctx.font = `${fontSize}px NotoSansHebrew`;
       const metrics = ctx.measureText(text);
-      canvas.width = metrics.width + 10;
-      canvas.height = fontSize + 10;
       
+      // Set canvas dimensions based on text metrics
+      const textWidth = metrics.width;
+      const textHeight = fontSize;
+      
+      // Add some padding
+      canvas.width = textWidth + 10;
+      canvas.height = textHeight + 10;
+      
+      // Clear canvas
       ctx.fillStyle = 'white';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      // Draw text
       ctx.font = `${fontSize}px NotoSansHebrew`;
       ctx.fillStyle = 'black';
       ctx.textAlign = 'right';
@@ -122,35 +131,47 @@ export const ExpenseForm = ({ employeeDetails }: ExpenseFormProps) => {
       return canvas.toDataURL('image/png');
     };
 
-    const titleImage = createHebrewTextImage("טופס החזר הוצאות", 16);
-    doc.addImage(titleImage, 'PNG', 100, 20, 90, 10);
-    
-    const nameImage = createHebrewTextImage(`שם: ${employeeDetails.name}`, 12);
-    doc.addImage(nameImage, 'PNG', 120, 30, 70, 8);
-    
-    const idImage = createHebrewTextImage(`מספר עובד: ${employeeDetails.id}`, 12);
-    doc.addImage(idImage, 'PNG', 120, 40, 70, 8);
+    // Calculate image dimensions based on text width
+    const addHebrewText = (text: string, x: number, y: number, fontSize: number = 12) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d')!;
+      ctx.font = `${fontSize}px NotoSansHebrew`;
+      const metrics = ctx.measureText(text);
+      const imageWidth = (metrics.width + 10) * 0.264583; // Convert pixels to mm
+      const imageHeight = (fontSize + 10) * 0.264583; // Convert pixels to mm
+      
+      const image = createHebrewTextImage(text, fontSize);
+      doc.addImage(image, 'PNG', x, y, imageWidth, imageHeight);
+      return { width: imageWidth, height: imageHeight };
+    };
 
+    // Title
+    addHebrewText("טופס החזר הוצאות", 100, 20, 16);
+    
+    // Employee details
+    addHebrewText(`שם: ${employeeDetails.name}`, 120, 30, 12);
+    addHebrewText(`מספר עובד: ${employeeDetails.id}`, 120, 40, 12);
+
+    // Table headers
     const headers = ["סכום", "תאריך", "פירוט"];
     let y = 60;
     
     doc.line(20, y - 5, 190, y - 5);
     headers.forEach((header, i) => {
-      const headerImage = createHebrewTextImage(header);
-      doc.addImage(headerImage, 'PNG', 190 - ((i + 1) * 60), y - 3, 30, 8);
+      addHebrewText(header, 190 - ((i + 1) * 60), y - 3, 12);
     });
     doc.line(20, y + 2, 190, y + 2);
 
+    // Expense entries
     y += 10;
     let total = 0;
-    expenses.forEach((expense, index) => {
+    expenses.forEach((expense) => {
       doc.line(20, y - 5, 190, y - 5);
       
       doc.text(expense.amount, 190, y, { align: "right" });
       doc.text(expense.date, 130, y, { align: "right" });
       
-      const descImage = createHebrewTextImage(expense.description);
-      doc.addImage(descImage, 'PNG', 20, y - 3, 50, 8);
+      addHebrewText(expense.description, 20, y - 3, 12);
       
       total += parseFloat(expense.amount) || 0;
       
@@ -168,21 +189,21 @@ export const ExpenseForm = ({ employeeDetails }: ExpenseFormProps) => {
       y += 10;
     });
 
+    // Total and signatures
     doc.line(20, y - 5, 190, y - 5);
-    const totalImage = createHebrewTextImage(`סה"כ: ${total.toFixed(2)} ₪`);
-    doc.addImage(totalImage, 'PNG', 120, y + 7, 70, 8);
+    addHebrewText(`סה"כ: ${total.toFixed(2)} ₪`, 120, y + 7, 12);
 
+    // Draw table borders
     doc.line(20, 55, 20, y - 5);
     doc.line(190, 55, 190, y - 5);
     doc.line(110, 55, 110, y - 5);
     doc.line(50, 55, 50, y - 5);
 
+    // Add signature lines
     y += 30;
-    const signEmployeeImage = createHebrewTextImage("חתימת העובד: _________________");
-    doc.addImage(signEmployeeImage, 'PNG', 70, y, 120, 8);
+    addHebrewText("חתימת העובד: _________________", 70, y, 12);
     y += 10;
-    const signManagerImage = createHebrewTextImage("חתימת מנהל: _________________");
-    doc.addImage(signManagerImage, 'PNG', 70, y, 120, 8);
+    addHebrewText("חתימת מנהל: _________________", 70, y, 12);
 
     doc.save("expenses.pdf");
   };
