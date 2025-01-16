@@ -101,12 +101,21 @@ export const ExpenseForm = ({ employeeDetails }: ExpenseFormProps) => {
     // Enable right-to-left text direction
     doc.setR2L(true);
 
-    // Function to encode Hebrew text
+    // Function to encode Hebrew text with proper UTF-8 encoding
     const encodeHebrew = (text: string) => {
+      const hebrewChars: { [key: string]: string } = {
+        'א': '\u05D0', 'ב': '\u05D1', 'ג': '\u05D2', 'ד': '\u05D3', 'ה': '\u05D4',
+        'ו': '\u05D5', 'ז': '\u05D6', 'ח': '\u05D7', 'ט': '\u05D8', 'י': '\u05D9',
+        'כ': '\u05DB', 'ך': '\u05DA', 'ל': '\u05DC', 'מ': '\u05DE', 'ם': '\u05DD',
+        'נ': '\u05E0', 'ן': '\u05DF', 'ס': '\u05E1', 'ע': '\u05E2', 'פ': '\u05E4',
+        'ף': '\u05E3', 'צ': '\u05E6', 'ץ': '\u05E5', 'ק': '\u05E7', 'ר': '\u05E8',
+        'ש': '\u05E9', 'ת': '\u05EA', '"': '\u0022', "'": '\u0027', ' ': '\u0020',
+        ':': '\u003A', '₪': '\u20AA'
+      };
+
       return text.split('').map(char => {
-        const code = char.charCodeAt(0);
-        if (code >= 0x0590 && code <= 0x05FF) {
-          return String.fromCharCode(code - 0x0590 + 0xE000);
+        if (hebrewChars[char]) {
+          return String.fromCharCode(parseInt(hebrewChars[char].slice(2), 16));
         }
         return char;
       }).join('');
